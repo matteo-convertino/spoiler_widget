@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'package:spoiler_widget/models/spoiler_controller.dart';
 import 'package:spoiler_widget/models/text_spoiler_configs.dart';
 import 'package:spoiler_widget/widgets/spoiler_render_object.dart';
@@ -16,10 +15,12 @@ class SpoilerTextWrapper extends StatefulWidget {
     super.key,
     required this.child,
     required this.config,
+    this.resetSpoilerAfter,
   });
 
   final Widget child;
   final TextSpoilerConfig config;
+  final Duration? resetSpoilerAfter;
 
   @override
   State<SpoilerTextWrapper> createState() => _SpoilerTextWrapperState();
@@ -29,6 +30,8 @@ class _SpoilerTextWrapperState extends State<SpoilerTextWrapper>
     with TickerProviderStateMixin {
   late final SpoilerController _spoilerController =
       SpoilerController(vsync: this);
+
+  bool handleTap = true;
 
   @override
   void didUpdateWidget(covariant SpoilerTextWrapper oldWidget) {
@@ -55,11 +58,27 @@ class _SpoilerTextWrapperState extends State<SpoilerTextWrapper>
       child: widget.child,
       builder: (context, child) => GestureDetector(
         behavior: HitTestBehavior.translucent,
-        onTapDown: (details) {
-          if (widget.config.enableGestureReveal) {
-            _spoilerController.toggle(details.localPosition);
-          }
-        },
+        onTapDown: handleTap
+            ? (details) {
+                if (!widget.config.enableGestureReveal ||
+                    !handleTap ||
+                    !_spoilerController.toggle(details.localPosition)) {
+                  return;
+                }
+
+                if (widget.resetSpoilerAfter != null) {
+                  handleTap = false;
+
+                  Future.delayed(
+                    widget.resetSpoilerAfter!,
+                    () {
+                      _spoilerController.enable();
+                      handleTap = true;
+                    },
+                  );
+                }
+              }
+            : null,
         child: SpoilerRenderObjectWidget(
           textSelection: widget.config.textSelection,
           onPaint: (canvas, size) {
